@@ -5,6 +5,7 @@ import { EventsModule } from './events/events.module';
 import { StatsModule } from './stats/stats.module';
 import { SubscriberModule } from './subscriber/subscriber.module';
 import { NotificationEvent } from './common/entities/notification-event.entity';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationEvent } from './common/entities/notification-event.entity';
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),
+    EventEmitterModule.forRoot(),
     EventsModule,
     StatsModule,
     SubscriberModule,
