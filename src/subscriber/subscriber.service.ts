@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
-import { REDIS_SUBSCRIBER } from 'src/redis/redis.module';
+import { REDIS_SUBSCRIBER } from 'src/redis/redis.constants';
 import { NotificationEvent } from 'src/common/entities/notification-event.entity';
 import { EventType } from 'src/common/enums/event-type.enum';
 
