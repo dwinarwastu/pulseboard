@@ -1,98 +1,186 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Pulseboard
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> Real-time notification event dashboard — built to complement Notihub.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Built with **NestJS**, **Redis Pub/Sub**, **SSE (Server-Sent Events)**, and **PostgreSQL**. Subscribes to notification events from Notihub and streams them to connected clients in real-time.
 
-## Description
+![CI](https://github.com/dwinarwastu/pulseboard/actions/workflows/ci.yml/badge.svg)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Tech Stack
 
-```bash
-$ npm install
+| Layer | Technology |
+|---|---|
+| Framework | NestJS |
+| Real-time | Server-Sent Events (SSE) |
+| Message Bus | Redis Pub/Sub |
+| Database | PostgreSQL + TypeORM |
+| Containerization | Docker + Docker Compose |
+
+---
+
+## How It Works
+
+1. **Notihub publishes** — every time a notification status changes (`sent` / `failed`), Notihub publishes an event to a Redis Pub/Sub channel
+2. **Pulseboard subscribes** — on startup, Pulseboard subscribes to the same Redis channel
+3. **Persist** — incoming events are saved to PostgreSQL for historical queries
+4. **Stream** — connected SSE clients receive events in real-time via `GET /events/stream`
+5. **Stats** — aggregate stats (total, sent, failed, pending per channel) are queryable via `GET /stats`
+
+Each service is independent — Pulseboard doesn't share a database with Notihub, only communicating through Redis Pub/Sub.
+
+---
+
+## Project Structure
+
+```
+src/
+├── events/           # SSE endpoint, stream events to clients
+├── stats/            # Aggregate stats per channel
+├── subscriber/       # Redis Pub/Sub subscriber
+├── redis/            # Redis client provider
+└── common/
+    ├── entities/
+    ├── enums/
+    └── interfaces/
 ```
 
-## Compile and run the project
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+
+- Docker & Docker Compose
+- Notihub running and publishing events to Redis
+
+### Run with Docker
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
+# fill in your credentials
+docker compose up -d
 ```
 
-## Run tests
+### Run locally
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
+npm run start:dev
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Environment Variables
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+| Variable | Description |
+|---|---|
+| `NODE_ENV` | `development` or `production` |
+| `DB_HOST` | PostgreSQL host |
+| `DB_PORT` | PostgreSQL port (default: `5432`) |
+| `DB_USER` | PostgreSQL user |
+| `DB_PASS` | PostgreSQL password |
+| `DB_NAME` | PostgreSQL database name |
+| `REDIS_HOST` | Redis host |
+| `REDIS_PORT` | Redis port (default: `6379`) |
+| `NOTIHUB_REDIS_CHANNEL` | Redis channel to subscribe to (default: `notihub:events`) |
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+---
+
+## API Reference
+
+### SSE Stream
+
+```
+GET /events/stream
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Connect to this endpoint to receive real-time notification events. Keeps the connection open and pushes events as they arrive.
 
-## Resources
+**Example event — sent**
 
-Check out a few resources that may come in handy when working with NestJS:
+```
+event: sent
+id: 1
+data: {"type":"sent","data":{"logId":"fdbd81ab-...","channel":"email","recipient":"test@example.com","metadata":{"subject":"Test"}},"timestamp":"2026-05-29T01:06:36.308Z"}
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**Example event — failed**
 
-## Support
+```
+event: failed
+id: 2
+data: {"type":"failed","data":{"logId":"dde8b717-...","channel":"email","recipient":"test@example.com"},"timestamp":"2026-05-29T01:02:15.653Z"}
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+---
 
-## Stay in touch
+### Recent Events
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```
+GET /events/recent?limit=20
+```
 
-## License
+Returns the most recent notification events from PostgreSQL.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| Query | Type | Required | Description |
+|---|---|---|---|
+| `limit` | `number` | No | Number of events to return (default: `20`) |
+
+---
+
+### Stats
+
+```
+GET /stats
+```
+
+Returns aggregate stats per channel.
+
+**Response**
+
+```json
+{
+  "channels": [
+    {
+      "channel": "email",
+      "total": 100,
+      "sent": 80,
+      "failed": 15,
+      "pending": 5
+    }
+  ],
+  "totalEvents": 100
+}
+```
+
+---
+
+## Event Types
+
+| Type | Description |
+|---|---|
+| `sent` | Notification successfully delivered |
+| `failed` | Notification delivery failed |
+| `pending` | Notification queued, waiting to be processed |
+| `processing` | Worker picked up the job |
+
+---
+
+## Integration with Notihub
+
+Pulseboard is designed to work alongside [Notihub](https://github.com/dwinarwastu/notihub). To enable the integration, add this to Notihub's `.env`:
+
+```env
+PULSEBOARD_REDIS_CHANNEL=notihub:events
+```
+
+Make sure both services point to the same Redis instance.
+
+---
+
+## Architecture Decisions
+
+See [docs/adr](./docs/adr) for architecture decision records explaining the key design choices behind this service.
